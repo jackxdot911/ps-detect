@@ -1,74 +1,139 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+// Home.tsx
+import React, { useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  FlatList,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+} from "react-native";
+import Upload from "@/components/Upload";
+import Camera from "@/components/Camera";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const Home = () => {
+  const [images, setImages] = useState<string[]>([]);
+  const [showCamera, setShowCamera] = useState(false);
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const handleNewImage = (imageUri: string) => {
+    setImages((prev) => [imageUri, ...prev]);
+  };
+
+  const renderImageItem = ({ item }: { item: string }) => (
+    <View style={styles.imageItem}>
+      <Image source={{ uri: item }} style={styles.image} />
+    </View>
   );
-}
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {showCamera ? (
+        <Camera
+          onCapture={handleNewImage}
+          onClose={() => setShowCamera(false)}
+        />
+      ) : (
+        <>
+          <Text style={styles.mainTxt}>Gallery</Text>
+          <View style={styles.uploadSection}>
+            <Text style={styles.uploadTitle}>Upload or Capture Images</Text>
+            <View style={styles.buttonContainer}>
+              <Upload onUpload={handleNewImage} />
+              <Camera.Button onPress={() => setShowCamera(true)} />
+            </View>
+          </View>
+          {images.length > 0 ? (
+            <FlatList
+              data={images}
+              renderItem={renderImageItem}
+              keyExtractor={(_, index) => index.toString()}
+              numColumns={3}
+              contentContainerStyle={styles.imageGallery}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                No images yet. Start by uploading or capturing one!
+              </Text>
+            </View>
+          )}
+        </>
+      )}
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f9fa",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  mainTxt: {
+    fontSize: 32,
+    marginVertical: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#1a1a1a",
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  uploadSection: {
+    backgroundColor: "#4a90e2",
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  uploadTitle: {
+    fontSize: 18,
+    color: "#fff",
+    marginBottom: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+  },
+  imageGallery: {
+    padding: 8,
+  },
+  imageItem: {
+    flex: 1 / 3,
+    aspectRatio: 1,
+    margin: 4,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 24,
   },
 });
+
+export default Home;
