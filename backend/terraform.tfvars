@@ -1,0 +1,6 @@
+aws_region = "us-east-1"
+aws_account_id = "273354662367"
+project_prefix = "user_mgmt"
+cognito_user_pool_id = "us-east-1_4CCK4IsXB"
+cognito_user_pool_arn = "arn:aws:cognito-idp:us-east-1:273354662367:userpool/us-east-1_4CCK4IsXB"
+dynamodb_table_name = "user_table"
