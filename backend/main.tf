@@ -11,6 +11,13 @@ terraform {
       version = "~> 4.0"
     }
   }
+  backend "s3" {
+    bucket         = "ps-detect-terraform-state"
+    key            = "ps-detect/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
 }
 
 # Create DynamoDB table for user data
