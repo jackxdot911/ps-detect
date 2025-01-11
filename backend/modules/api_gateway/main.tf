@@ -2,6 +2,10 @@
 resource "aws_api_gateway_rest_api" "main" {
   name = "user_management_api"
   description = "API for user management functions"
+
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
 }
 
 # Cognito User Pool Authorizer
