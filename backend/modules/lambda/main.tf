@@ -7,6 +7,9 @@ resource "aws_lambda_function" "post_auth" {
   handler         = "index.handler"
   runtime         = "nodejs18.x"
 
+  # Add this line to detect source code changes
+  source_code_hash = data.archive_file.post_auth_lambda.output_base64sha256
+
   # Environment variables available to the function
   environment {
     variables = {
@@ -24,6 +27,9 @@ resource "aws_lambda_function" "get_user" {
   handler         = "index.handler"
   runtime         = "nodejs18.x"
 
+  # Add this line to detect source code changes
+  source_code_hash = data.archive_file.get_user_lambda.output_base64sha256
+
   environment {
     variables = {
       DYNAMODB_TABLE = var.dynamodb_table
@@ -39,6 +45,9 @@ resource "aws_lambda_function" "hello_world" {
   role            = var.lambda_role_arn
   handler         = "index.handler"
   runtime         = "nodejs18.x"
+
+  # Add this line to detect source code changes
+  source_code_hash = data.archive_file.hello_world_lambda.output_base64sha256
 }
 
 # Lambda function source code archives
@@ -67,4 +76,19 @@ resource "aws_lambda_permission" "cognito_post_auth" {
   function_name = aws_lambda_function.post_auth.function_name
   principal     = "cognito-idp.amazonaws.com"
   source_arn    = "arn:aws:cognito-idp:${var.aws_region}:${var.aws_account_id}:userpool/${var.user_pool_id}"
+}
+
+resource "aws_cognito_user_pool" "existing" {
+  name = var.user_pool_id  # Using the ID as name since we're referencing existing pool
+  
+  # Configure the Lambda trigger
+  lambda_config {
+    post_authentication = aws_lambda_function.post_auth.arn
+  }
+
+  # Prevent Terraform from modifying other User Pool settings
+  lifecycle {
+    ignore_changes = all
+    prevent_destroy = true
+  }
 }
