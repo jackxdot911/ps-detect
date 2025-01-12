@@ -50,6 +50,21 @@ resource "aws_lambda_function" "hello_world" {
   source_code_hash = data.archive_file.hello_world_lambda.output_base64sha256
 }
 
+resource "null_resource" "lambda_dependencies" {
+  triggers = {
+    always_run = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      cd ${path.module}/src/post_auth && npm install && cd ../../../../ 
+      cd ${path.module}/src/get_user && npm install && cd ../../../../ 
+      cd ${path.module}/src/hello_world && npm install && cd ../../../../ 
+    EOF
+  }
+}
+
+
 # Lambda function source code archives
 data "archive_file" "post_auth_lambda" {
   type        = "zip"
