@@ -20,6 +20,70 @@ terraform {
   }
 }
 
+# Cognito User Pool
+resource "aws_cognito_user_pool" "main" {
+  name = "ps-detect"
+
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = true
+    require_uppercase = true
+  }
+
+  username_attributes = ["email"]
+  
+  auto_verified_attributes = ["email"]
+
+  lambda_config {
+    post_authentication = module.lambda_functions.post_auth_lambda_arn
+  }
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject = "Your verification code"
+    email_message = "Your verification code is {####}"
+  }
+
+  schema {
+    attribute_data_type = "String"
+    name               = "email"
+    required           = true
+    mutable           = true
+
+    string_attribute_constraints {
+      min_length = 3
+      max_length = 256
+    }
+  }
+
+  # Add lifecycle rule to handle deletion
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Cognito User Pool Client
+resource "aws_cognito_user_pool_client" "main" {
+  name         = "ps-detect-client"
+  user_pool_id = aws_cognito_user_pool.main.id
+
+  generate_secret = false
+  
+  explicit_auth_flows = [
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_PASSWORD_AUTH"
+  ]
+}
+
+resource "aws_cognito_user_pool_domain" "main" {
+  domain       = "ps-detect"
+  user_pool_id = aws_cognito_user_pool.main.id
+}
+
+
 # Create DynamoDB table for user data
 # Uses PAY_PER_REQUEST billing for cost-effectiveness at varying scales
 resource "aws_dynamodb_table" "user_table" {

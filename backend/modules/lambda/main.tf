@@ -92,18 +92,3 @@ resource "aws_lambda_permission" "cognito_post_auth" {
   principal     = "cognito-idp.amazonaws.com"
   source_arn    = "arn:aws:cognito-idp:${var.aws_region}:${var.aws_account_id}:userpool/${var.user_pool_id}"
 }
-
-resource "aws_cognito_user_pool" "existing" {
-  name = var.user_pool_id  # Using the ID as name since we're referencing existing pool
-  
-  # Configure the Lambda trigger
-  lambda_config {
-    post_authentication = aws_lambda_function.post_auth.arn
-  }
-
-  # Prevent Terraform from modifying other User Pool settings
-  lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
-}
