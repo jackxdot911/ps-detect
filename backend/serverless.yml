@@ -15,6 +15,10 @@ stages:
 provider:
   name: aws
   runtime: nodejs20.x
+  environment:
+    USERS_TABLE: ${param:tableName}
+    USER_POOL_ID: ${self:custom.userPoolId}
+    USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
   iam:
     role:
       statements:
@@ -28,16 +32,28 @@ provider:
             - dynamodb:DeleteItem
           Resource:
             - Fn::GetAtt: [UsersTable, Arn]
-  environment:
-    USERS_TABLE: ${param:tableName}
-    USER_POOL_ID: ${self:custom.userPoolId}
-    USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
+        - Effect: Allow
+          Action:
+            - "cognito-idp:AdminInitiateAuth"
+            - "cognito-idp:AdminCreateUser"
+            - "cognito-idp:AdminSetUserPassword"
+          Resource:
+            - "arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:custom.userPoolId}"
 
 functions:
   api:
     handler: handler.handler
     events:
-      - httpApi: "*"
+      - httpApi:
+          method: "ANY"
+          path: "/{proxy+}"
+          authorizer:
+            name: cognitoAuthorizer
+            type: "jwt"
+            identitySource: "$request.header.Authorization"
+            issuerUrl: "https://cognito-idp.${aws:region}.amazonaws.com/${self:custom.userPoolId}"
+            audience:
+              - ${self:custom.userPoolClientId}
 
 resources:
   Resources:
