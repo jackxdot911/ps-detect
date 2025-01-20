@@ -1,11 +1,9 @@
-# "org" ensures this Service is used with the correct Serverless Framework Access Key.
 org: jack001
-# "service" is the name of this project. This will also be added to your AWS resource names.
 service: ps-detct
 
 custom:
-  userPoolId: "us-east-1_QH1VToZ5g"  
-  userPoolClientId: "14ma5rh8sgopmni8hk8v074n3d"  
+  userPoolId: "us-east-1_QH1VToZ5g"
+  userPoolClientId: "14ma5rh8sgopmni8hk8v074n3d"
 
 stages:
   default:
@@ -15,45 +13,56 @@ stages:
 provider:
   name: aws
   runtime: nodejs20.x
+  region: us-east-1
+
+  httpApi:
+    cors: true
+    authorizers:
+      customAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${self:provider.region}.amazonaws.com/${self:custom.userPoolId}
+        audience:
+          - ${self:custom.userPoolClientId}
 
   environment:
     USERS_TABLE: ${param:tableName}
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
 
-  http:
-    cors: true
-    authorizers:
-      cognito-auth:
-        identitySource: $request.header.Authorization
-        issuerUrl: https://cognito-idp.us-east-1.amazonaws.com/${ssm:USER_POOL_ID}
-        audience: ${ssm:USER_POOL_CLIENT_ID}
-
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
-            - dynamodb:*
-            - s3:*
-            - cognito-idp:*
-            - ses:*
-            - sqs:*
-            - mobiletargeting:*
-            - rds-data:*
-            - secretsmanager:*
-          Resource: "*"
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            - dynamodb:UpdateItem
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${param:tableName}"
 
 functions:
   api:
     handler: handler.handler
     events:
       - httpApi:
-          path: restricted
-          method: get
-          cors: true
+          path: /users/{userId}
+          method: GET
+      - httpApi:
+          path: /users
+          method: POST
           authorizer:
-            arn: arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:custom.userPoolId}
+            name: customAuthorizer
+      - httpApi:
+          path: /users/{userId}
+          method: DELETE
+          authorizer:
+            name: customAuthorizer
+      - httpApi:
+          path: /users/{userId}
+          method: PUT
+          authorizer:
+            name: customAuthorizer
 
 resources:
   Resources:

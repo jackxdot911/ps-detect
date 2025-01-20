@@ -1,11 +1,6 @@
+const { verify } = require("jsonwebtoken");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-
-const {
-  DynamoDBDocumentClient,
-  GetCommand,
-  PutCommand,
-} = require("@aws-sdk/lib-dynamodb");
-
+const { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 const express = require("express");
 const serverless = require("serverless-http");
 
@@ -17,37 +12,48 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 app.use(express.json());
 
+// Middleware to check JWT
+const authenticate = (req, res, next) => {
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).json({ error: "Authorization header is missing" });
+  }
+
+  try {
+    const decoded = verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+};
+
+// Public GET route
 app.get("/users/:userId", async (req, res) => {
   const params = {
     TableName: USERS_TABLE,
-    Key: {
-      userId: req.params.userId,
-    },
+    Key: { userId: req.params.userId },
   };
 
   try {
     const command = new GetCommand(params);
     const { Item } = await docClient.send(command);
     if (Item) {
-      const { userId, name } = Item;
-      res.json({ userId, name });
+      res.json(Item);
     } else {
-      res
-        .status(404)
-        .json({ error: 'Could not find user with provided "userId"' });
+      res.status(404).json({ error: "User not found" });
     }
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ error: "Could not retrieve user" });
   }
 });
 
-app.post("/users", async (req, res) => {
+// Protected POST route
+app.post("/users", authenticate, async (req, res) => {
   const { userId, name } = req.body;
-  if (typeof userId !== "string") {
-    res.status(400).json({ error: '"userId" must be a string' });
-  } else if (typeof name !== "string") {
-    res.status(400).json({ error: '"name" must be a string' });
+  if (!userId || !name) {
+    return res.status(400).json({ error: "userId and name are required" });
   }
 
   const params = {
@@ -65,10 +71,52 @@ app.post("/users", async (req, res) => {
   }
 });
 
-app.use((req, res, next) => {
-  return res.status(404).json({
-    error: "Not Found",
-  });
+// Protected DELETE route
+app.delete("/users/:userId", authenticate, async (req, res) => {
+  const params = {
+    TableName: USERS_TABLE,
+    Key: { userId: req.params.userId },
+  };
+
+  try {
+    const command = new DeleteCommand(params);
+    await docClient.send(command);
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Could not delete user" });
+  }
+});
+
+// Protected PUT route
+app.put("/users/:userId", authenticate, async (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: "Name is required" });
+  }
+
+  const params = {
+    TableName: USERS_TABLE,
+    Key: { userId: req.params.userId },
+    UpdateExpression: "SET #name = :name",
+    ExpressionAttributeNames: { "#name": "name" },
+    ExpressionAttributeValues: { ":name": name },
+    ReturnValues: "ALL_NEW",
+  };
+
+  try {
+    const command = new PutCommand(params);
+    const { Attributes } = await docClient.send(command);
+    res.json(Attributes);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Could not update user" });
+  }
+});
+
+// Catch-all route for undefined paths
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
 });
 
 exports.handler = serverless(app);
