@@ -15,45 +15,45 @@ stages:
 provider:
   name: aws
   runtime: nodejs20.x
+
   environment:
     USERS_TABLE: ${param:tableName}
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
+
+  http:
+    cors: true
+    authorizers:
+      cognito-auth:
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.us-east-1.amazonaws.com/${ssm:USER_POOL_ID}
+        audience: ${ssm:USER_POOL_CLIENT_ID}
+
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:GetItem
-            - dynamodb:PutItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-          Resource:
-            - Fn::GetAtt: [UsersTable, Arn]
-        - Effect: Allow
-          Action:
-            - "cognito-idp:AdminInitiateAuth"
-            - "cognito-idp:AdminCreateUser"
-            - "cognito-idp:AdminSetUserPassword"
-          Resource:
-            - "arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:custom.userPoolId}"
+            - dynamodb:*
+            - s3:*
+            - cognito-idp:*
+            - ses:*
+            - sqs:*
+            - mobiletargeting:*
+            - rds-data:*
+            - secretsmanager:*
+          Resource: "*"
 
 functions:
   api:
     handler: handler.handler
     events:
       - httpApi:
-          method: "ANY"
-          path: "/{proxy+}"
+          path: restricted
+          method: get
+          cors: true
           authorizer:
-            name: cognitoAuthorizer
-            type: "jwt"
-            identitySource: "$request.header.Authorization"
-            issuerUrl: "https://cognito-idp.${aws:region}.amazonaws.com/${self:custom.userPoolId}"
-            audience:
-              - ${self:custom.userPoolClientId}
+            arn: arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:custom.userPoolId}
 
 resources:
   Resources:
