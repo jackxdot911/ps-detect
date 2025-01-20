@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "pose-detection",
-    "slug": "pose-detection",
+    "name": "ps-detect",
+    "slug": "ps-detect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,7 +16,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.jackdotedge.posedetection"
+      "package": "com.jackdotedge.psdetect"
     },
     "web": {
       "bundler": "metro",
