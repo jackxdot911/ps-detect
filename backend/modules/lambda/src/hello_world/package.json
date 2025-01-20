@@ -1,6 +1,0 @@
-{
-    "name": "hello-world-lambda",
-    "version": "1.0.0",
-    "description": "Hello world Lambda function",
-    "main": "index.js"
-  }

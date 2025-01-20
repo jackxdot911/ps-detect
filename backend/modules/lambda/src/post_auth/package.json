@@ -1,9 +1,0 @@
-{
-    "name": "post-auth-lambda",
-    "version": "1.0.0",
-    "description": "Post authentication Lambda function",
-    "main": "index.js",
-    "dependencies": {
-      "aws-sdk": "^2.1001.0"
-    }
-  }

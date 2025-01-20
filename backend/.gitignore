@@ -1,8 +1,2 @@
-.terraform/
-*.tfstate
-*.tfstate.*
-.terraform.lock.hcl
-.DS_Store
-node_modules/
-package-lock.json
-*.zip
+node_modules
+.serverless
