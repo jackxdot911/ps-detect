@@ -14,8 +14,6 @@ def authenticate_and_get_token(username: str, password: str, user_pool_id: str, 
             }
         )
 
-        print(resp)
-
         print("Log in success")
         print("Access token:", resp['AuthenticationResult']['AccessToken'])
         print("ID token:", resp['AuthenticationResult']['IdToken'])
@@ -30,4 +28,7 @@ def authenticate_and_get_token(username: str, password: str, user_pool_id: str, 
         print(f"Unexpected error: {e}")
 
 # Call the function with your credentials
-authenticate_and_get_token('nishankumar559@gmail.com', 'Poiuy@09876', 'us-east-1_QH1VToZ5g', '14ma5rh8sgopmni8hk8v074n3d')
+authenticate_and_get_token('nishankumar559@gmail.com',
+                            'Poiuy@09876', 
+                            'us-east-1_ePLUL9Wyz', 
+                            '5imlnro24sus4iai99m1379njf')

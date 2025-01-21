@@ -2,8 +2,8 @@ org: jack001
 service: ps-detct
 
 custom:
-  userPoolId: "us-east-1_QH1VToZ5g"
-  userPoolClientId: "14ma5rh8sgopmni8hk8v074n3d"
+  userPoolId: "us-east-1_ePLUL9Wyz"
+  userPoolClientId: "5imlnro24sus4iai99m1379njf"
 
 stages:
   default:

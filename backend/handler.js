@@ -1,4 +1,3 @@
-const { verify } = require("jsonwebtoken");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 const express = require("express");
@@ -11,22 +10,6 @@ const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
 
 app.use(express.json());
-
-// Middleware to check JWT
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization;
-  if (!token) {
-    return res.status(401).json({ error: "Authorization header is missing" });
-  }
-
-  try {
-    const decoded = verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(403).json({ error: "Invalid token" });
-  }
-};
 
 // Public GET route
 app.get("/users/:userId", async (req, res) => {
@@ -50,7 +33,7 @@ app.get("/users/:userId", async (req, res) => {
 });
 
 // Protected POST route
-app.post("/users", authenticate, async (req, res) => {
+app.post("/users", async (req, res) => {
   const { userId, name } = req.body;
   if (!userId || !name) {
     return res.status(400).json({ error: "userId and name are required" });
@@ -72,7 +55,7 @@ app.post("/users", authenticate, async (req, res) => {
 });
 
 // Protected DELETE route
-app.delete("/users/:userId", authenticate, async (req, res) => {
+app.delete("/users/:userId", async (req, res) => {
   const params = {
     TableName: USERS_TABLE,
     Key: { userId: req.params.userId },
@@ -89,7 +72,7 @@ app.delete("/users/:userId", authenticate, async (req, res) => {
 });
 
 // Protected PUT route
-app.put("/users/:userId", authenticate, async (req, res) => {
+app.put("/users/:userId", async (req, res) => {
   const { name } = req.body;
   if (!name) {
     return res.status(400).json({ error: "Name is required" });
