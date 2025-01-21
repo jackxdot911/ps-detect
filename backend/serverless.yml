@@ -64,6 +64,13 @@ functions:
           authorizer:
             name: customAuthorizer
 
+  userCreated:
+    handler: triggers/userCreated.handler
+    events:
+      - cognitoUserPool:
+          pool: ${self:custom.userPoolId}
+          trigger: PostConfirmation
+
 resources:
   Resources:
     UsersTable:
