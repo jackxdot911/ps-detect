@@ -51,7 +51,7 @@ provider:
 
 functions:
   api:
-    handler: handler.handler
+    handler: functions/userManagement/userHandlers.handler
     events:
       - httpApi:
           path: /users/{userId}
@@ -73,7 +73,7 @@ functions:
             name: customAuthorizer
 
   userCreated:
-    handler: triggers/userCreated.userCreated
+    handler: functions/triggers/userCreated.handler
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
@@ -82,14 +82,13 @@ functions:
           forceDeploy: true
 
   userLoggedIn:
-    handler: triggers/userLoggedIn.userLoggedIn
+    handler: functions/triggers/userLoggedIn.userLoggedIn
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
           trigger: PostAuthentication
           existing: true
           forceDeploy: true
-
 
 resources:
   Resources:
