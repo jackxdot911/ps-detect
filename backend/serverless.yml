@@ -72,6 +72,7 @@ functions:
           pool: ${self:custom.userPoolName}
           trigger: PostConfirmation
           existing: true
+          forceDeploy: true
 
 resources:
   Resources:
