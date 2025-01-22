@@ -4,7 +4,7 @@ service: ps-detct
 custom:
   userPoolId: "us-east-1_ePLUL9Wyz"
   userPoolClientId: "5imlnro24sus4iai99m1379njf"
-  poolName: "User pool - ps-detect"
+  userPoolName: "User pool - ps-detect"
 
 stages:
   default:
@@ -29,7 +29,7 @@ provider:
   environment:
     USERS_TABLE: ${param:tableName}
     USER_POOL_ID: ${self:custom.userPoolId}
-    USER_POOL_CLIENT_ID: ${self:custom.poolName}
+    USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
 
   iam:
     role:
@@ -69,8 +69,9 @@ functions:
     handler: triggers/userCreated.handler
     events:
       - cognitoUserPool:
-          pool: ${self:custom.userPoolId}
+          pool: ${self:custom.userPoolName}
           trigger: PostConfirmation
+          existing: true
 
 resources:
   Resources:
