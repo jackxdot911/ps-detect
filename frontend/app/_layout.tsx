@@ -7,7 +7,7 @@ import "react-native-reanimated";
 import React from "react";
 import { Authenticator } from "@aws-amplify/ui-react-native";
 import { Amplify } from "aws-amplify";
-import constants from "@/constants/Constant";
+import constants from "@/constants/Constants";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

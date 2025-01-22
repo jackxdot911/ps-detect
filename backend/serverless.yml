@@ -4,6 +4,7 @@ service: ps-detct
 custom:
   userPoolId: "us-east-1_ePLUL9Wyz"
   userPoolClientId: "5imlnro24sus4iai99m1379njf"
+  poolName: "User pool - ps-detect"
 
 stages:
   default:
@@ -28,7 +29,7 @@ provider:
   environment:
     USERS_TABLE: ${param:tableName}
     USER_POOL_ID: ${self:custom.userPoolId}
-    USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
+    USER_POOL_CLIENT_ID: ${self:custom.poolName}
 
   iam:
     role:
