@@ -9,7 +9,9 @@ custom:
 stages:
   default:
     params:
-      tableName: "users-table-${sls:stage}"
+      usersTableName: "users-table-${sls:stage}"
+      workoutTableName: "workout-table-${sls:stage}"
+      s3keyTableName: "s3key-table-${sls:stage}"
 
 provider:
   name: aws
@@ -27,7 +29,9 @@ provider:
           - ${self:custom.userPoolClientId}
 
   environment:
-    USERS_TABLE: ${param:tableName}
+    USERS_TABLE: ${param:usersTableName}
+    WORKOUT_TABLE: ${param:workoutTableName}
+    S3KEY_TABLE: ${param:s3keyTableName}
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
 
@@ -40,7 +44,10 @@ provider:
             - dynamodb:PutItem
             - dynamodb:DeleteItem
             - dynamodb:UpdateItem
-          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${param:tableName}"
+          Resource: 
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:usersTableName}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:workoutTableName}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:s3keyTableName}"
 
 functions:
   api:
@@ -66,13 +73,23 @@ functions:
             name: customAuthorizer
 
   userCreated:
-    handler: triggers/userCreated.handler
+    handler: triggers/userCreated.userCreated
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
           trigger: PostConfirmation
           existing: true
           forceDeploy: true
+
+  userLoggedIn:
+    handler: triggers/userLoggedIn.userLoggedIn
+    events:
+      - cognitoUserPool:
+          pool: ${self:custom.userPoolName}
+          trigger: PostAuthentication
+          existing: true
+          forceDeploy: true
+
 
 resources:
   Resources:
@@ -86,4 +103,28 @@ resources:
           - AttributeName: userId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-        TableName: ${param:tableName}
+        TableName: ${param:usersTableName}
+
+    WorkoutTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: workoutId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: workoutId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${param:workoutTableName}
+
+    S3KeyTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: keyId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: keyId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${param:s3keyTableName}
