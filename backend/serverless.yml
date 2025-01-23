@@ -44,10 +44,17 @@ provider:
             - dynamodb:PutItem
             - dynamodb:DeleteItem
             - dynamodb:UpdateItem
+            - dynamodb:Query
+            - dynamodb:Scan
           Resource: 
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:usersTableName}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:usersTableName}/index/EmailIndex"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:workoutTableName}"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:s3keyTableName}"
+
+            # or  wildcard to give permission to all tables
+            # - "arn:aws:dynamodb:${self:provider.region}:*:table/*"
+
 
 functions:
   api:
@@ -82,7 +89,7 @@ functions:
           forceDeploy: true
 
   userLoggedIn:
-    handler: functions/triggers/userLoggedIn.userLoggedIn
+    handler: functions/triggers/userLoggedIn.handler
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
@@ -98,9 +105,18 @@ resources:
         AttributeDefinitions:
           - AttributeName: userId
             AttributeType: S
+          - AttributeName: email
+            AttributeType: S
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
         TableName: ${param:usersTableName}
 

@@ -28,7 +28,7 @@ def authenticate_and_get_token(username: str, password: str, user_pool_id: str, 
         print(f"Unexpected error: {e}")
 
 # Call the function with your credentials
-authenticate_and_get_token('nishankumar559@gmail.com',
+authenticate_and_get_token('nishan.kumar@7edge.com',
                             'Poiuy@09876', 
                             'us-east-1_ePLUL9Wyz', 
                             '5imlnro24sus4iai99m1379njf')
