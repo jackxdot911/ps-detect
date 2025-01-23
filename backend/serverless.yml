@@ -55,6 +55,16 @@ provider:
             # or  wildcard to give permission to all tables
             # - "arn:aws:dynamodb:${self:provider.region}:*:table/*"
 
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminUpdateUserAttributes
+          Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:custom.userPoolId}
+
+          # in place of * we can put the account id (region}:*:userpool)
+          # Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:custom.userPoolId}
+
+
 
 functions:
   api:
@@ -63,14 +73,6 @@ functions:
       - httpApi:
           path: /users/{userId}
           method: GET
-      - httpApi:
-          path: /users
-          method: POST
-          authorizer:
-            name: customAuthorizer
-      - httpApi:
-          path: /users/{userId}
-          method: DELETE
           authorizer:
             name: customAuthorizer
       - httpApi:
@@ -78,6 +80,15 @@ functions:
           method: PUT
           authorizer:
             name: customAuthorizer
+  
+  generateUserId:
+    handler: functions/triggers/generateUserId.handler
+    events:
+      - cognitoUserPool:
+          pool: ${self:custom.userPoolName}
+          trigger: PreSignUp
+          existing: true
+          forceDeploy: true
 
   userCreated:
     handler: functions/triggers/userCreated.handler

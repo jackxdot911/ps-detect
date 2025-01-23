@@ -1,4 +1,5 @@
 import boto3
+import jwt
 
 def authenticate_and_get_token(username: str, password: str, user_pool_id: str, app_client_id: str) -> None:
     client = boto3.client('cognito-idp')
@@ -17,6 +18,11 @@ def authenticate_and_get_token(username: str, password: str, user_pool_id: str, 
         print("Log in success")
         print("Access token:", resp['AuthenticationResult']['AccessToken'])
         print("ID token:", resp['AuthenticationResult']['IdToken'])
+
+        # Decode the ID token
+        decoded_token = jwt.decode(resp['AuthenticationResult']['IdToken'], options={"verify_signature": False})
+        email = decoded_token.get('email', 'Email not found in token')
+        print("Email:", email)
     
     except client.exceptions.NotAuthorizedException:
         print("Error: Incorrect username or password.")

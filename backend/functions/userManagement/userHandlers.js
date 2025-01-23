@@ -32,45 +32,6 @@ app.get("/users/:userId", async (req, res) => {
   }
 });
 
-// Protected POST route
-app.post("/users", async (req, res) => {
-  const { userId, name } = req.body;
-  if (!userId || !name) {
-    return res.status(400).json({ error: "userId and name are required" });
-  }
-
-  const params = {
-    TableName: USERS_TABLE,
-    Item: { userId, name },
-  };
-
-  try {
-    const command = new PutCommand(params);
-    await docClient.send(command);
-    res.json({ userId, name });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Could not create user" });
-  }
-});
-
-// Protected DELETE route
-app.delete("/users/:userId", async (req, res) => {
-  const params = {
-    TableName: USERS_TABLE,
-    Key: { userId: req.params.userId },
-  };
-
-  try {
-    const command = new DeleteCommand(params);
-    await docClient.send(command);
-    res.status(200).json({ message: "User deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Could not delete user" });
-  }
-});
-
 // Protected PUT route
 app.put("/users/:userId", async (req, res) => {
   const { name } = req.body;

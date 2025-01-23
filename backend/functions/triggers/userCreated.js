@@ -4,7 +4,6 @@ const {
   PutCommand,
   QueryCommand,
 } = require("@aws-sdk/lib-dynamodb");
-const { v4: uuidv4 } = require("uuid"); // For generating unique IDs
 
 const USERS_TABLE = process.env.USERS_TABLE;
 const client = new DynamoDBClient();
@@ -16,7 +15,7 @@ module.exports.handler = async (event) => {
   const userAttributes = event.request.userAttributes;
 
   // Extract user attributes
-  const userId = `USR${uuidv4().toUpperCase().slice(0, 6)}`;
+  const userId = userAttributes.userId || "";
   const email = userAttributes.email || "";
   const name = userAttributes.name || "";
   const age = ""; // Placeholder for age (not present in Cognito event)
