@@ -2,63 +2,86 @@ const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
   PutCommand,
-  QueryCommand,
+  GetCommand,
 } = require("@aws-sdk/lib-dynamodb");
+const { v4: uuidv4 } = require("uuid"); // Import UUID
+const { CognitoIdentityServiceProvider } = require("aws-sdk");
 
 const USERS_TABLE = process.env.USERS_TABLE;
 const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
+const cognito = new CognitoIdentityServiceProvider();
 
 module.exports.handler = async (event) => {
   console.log("PostAuthentication Event:", JSON.stringify(event, null, 2));
 
   const userAttributes = event.request.userAttributes;
+  const userPoolId = event.userPoolId;
+  const username = event.userName;
 
-  // Extract user attributes
-  const userId = userAttributes.userId || "";
-  const email = userAttributes.email || "";
-  const name = userAttributes.name || "";
-  const age = ""; // Placeholder for age (not present in Cognito event)
-  const created = new Date().toISOString();
-  const lastLoginAt = new Date().toISOString(); // Initially blank
+  // Extract or generate userId
+  let userId = userAttributes["custom:userId"];
 
   try {
-    // Query the table to check if the user exists by email
-    const queryParams = {
+    // Generate a userId if it doesn't exist
+    if (!userId) {
+      userId = `USR${uuidv4().toUpperCase().slice(0, 6)}`;
+      console.log("Generated custom userId:", userId);
+
+      // Update user attributes in Cognito
+      const updateParams = {
+        UserPoolId: userPoolId,
+        Username: username,
+        UserAttributes: [
+          {
+            Name: "custom:userId",
+            Value: userId,
+          },
+        ],
+      };
+
+      await cognito.adminUpdateUserAttributes(updateParams).promise();
+      console.log("Added custom userId to Cognito:", userId);
+    }
+
+    // Check if the user exists in DynamoDB using userId as the key
+    const getParams = {
       TableName: USERS_TABLE,
-      IndexName: "EmailIndex",
-      KeyConditionExpression: "email = :email",
-      ExpressionAttributeValues: {
-        ":email": email,
-      },
+      Key: { userId },
     };
 
-    const queryCommand = new QueryCommand(queryParams);
-    const { Items } = await docClient.send(queryCommand);
+    const getCommand = new GetCommand(getParams);
+    const { Item } = await docClient.send(getCommand);
 
-    console.log(Items);
+    console.log(Item);
+    
 
-    if (Items && Items.length > 0) {
-      console.log("User already exists:", Items[0]);
+    if (Item) {
+      console.log("User already exists in DynamoDB:", Item);
     } else {
-      // Add new user
+      // Add new user to DynamoDB
+      const created = new Date().toISOString();
+      const lastLoginAt = new Date().toISOString();
+
       const putParams = {
         TableName: USERS_TABLE,
         Item: {
-          userId,
-          email,
-          name,
-          age,
+          userId, // Primary key
+          email: userAttributes.email || "",
+          name: userAttributes.name || "",
+          age: "", // Placeholder for age
           created,
           lastLoginAt,
         },
       };
+
       const putCommand = new PutCommand(putParams);
-      await docClient.send(putCommand);
-      console.log("New user successfully added:", putParams.Item);
+      const response = await docClient.send(putCommand);
+      console.log("New user successfully added to DynamoDB:", response);
     }
   } catch (error) {
-    console.error("Error adding user:", error);
+    console.error("Error processing PostAuthentication:", error);
+    throw error;
   }
 
   return event;

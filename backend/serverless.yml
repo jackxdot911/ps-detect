@@ -2,8 +2,8 @@ org: jack001
 service: ps-detct
 
 custom:
-  userPoolId: "us-east-1_ePLUL9Wyz"
-  userPoolClientId: "5imlnro24sus4iai99m1379njf"
+  userPoolId: "us-east-1_0CLbqEKoy"
+  userPoolClientId: "21od8gs8rm64ac7ah555asiun3"
   userPoolName: "User pool - ps-detect"
 
 stages:
@@ -48,7 +48,6 @@ provider:
             - dynamodb:Scan
           Resource: 
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:usersTableName}"
-            - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:usersTableName}/index/EmailIndex"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:workoutTableName}"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:s3keyTableName}"
 
@@ -63,8 +62,6 @@ provider:
 
           # in place of * we can put the account id (region}:*:userpool)
           # Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:custom.userPoolId}
-
-
 
 functions:
   api:
@@ -116,18 +113,9 @@ resources:
         AttributeDefinitions:
           - AttributeName: userId
             AttributeType: S
-          - AttributeName: email
-            AttributeType: S
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: EmailIndex
-            KeySchema:
-              - AttributeName: email
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
         TableName: ${param:usersTableName}
 
