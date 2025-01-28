@@ -120,3 +120,8 @@ processPose(s3Url)
     console.log(`Skeleton image saved to: ${skeletonImage}`);
   })
   .catch(err => console.error('Error:', err.message));
+
+
+  // npm install @tensorflow/tfjs-node @tensorflow-models/pose-detection canvas axios @google/generative-ai
+
+  // node poseAnalysis.js
