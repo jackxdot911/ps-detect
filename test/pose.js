@@ -1,36 +1,108 @@
-const tf = require('@tensorflow/tfjs-node');
-const poseDetection = require('@tensorflow-models/pose-detection');
-const { createCanvas, loadImage } = require('canvas');
-const axios = require('axios');
-const fs = require('fs');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const tf = require("@tensorflow/tfjs-node");
+const poseDetection = require("@tensorflow-models/pose-detection");
+const { createCanvas, loadImage } = require("canvas");
+const axios = require("axios");
+const fs = require("fs");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI("AIzaSyAa6hB83viUHiIYurYEGHaGli-W9dTxaEs");
 
-const genAI = new GoogleGenerativeAI('AIzaSyAa6hB83viUHiIYurYEGHaGli-W9dTxaEs');
-
-// Keypoint connections for drawing skeleton
+// Updated connections for BlazePose (33 keypoints)
 const CONNECTIONS = [
-  [0, 1], [0, 2], [1, 3], [2, 4], [5, 6], [5, 7],
-  [7, 9], [6, 8], [8, 10], [5, 11], [6, 12], [11, 12],
-  [11, 13], [13, 15], [12, 14], [14, 16]
+  // Face
+  [0, 1],
+  [1, 2],
+  [2, 3],
+  [3, 7],
+  [0, 4],
+  [4, 5],
+  [5, 6],
+  [6, 8],
+  [9, 10], // Mouth
+  // Upper Body
+  [11, 12],
+  [11, 13],
+  [13, 15],
+  [12, 14],
+  [14, 16],
+  // Lower Body
+  [11, 23],
+  [23, 25],
+  [25, 27],
+  [27, 29],
+  [29, 31],
+  [12, 24],
+  [24, 26],
+  [26, 28],
+  [28, 30],
+  [30, 32],
+  // Hands
+  [15, 17],
+  [17, 19],
+  [19, 21],
+  [15, 21],
+  [16, 18],
+  [18, 20],
+  [20, 22],
+  [16, 22],
+  // Additional connections for better visualization
+  [23, 24],
+  [27, 28],
+  [31, 32],
+];
+// Updated keypoint names for BlazePose (33 points)
+const KEYPOINT_NAMES = [
+  "nose", // 0
+  "left_eye_inner", // 1
+  "left_eye", // 2
+  "left_eye_outer", // 3
+  "right_eye_inner", // 4
+  "right_eye", // 5
+  "right_eye_outer", // 6
+  "left_ear", // 7
+  "right_ear", // 8
+  "mouth_left", // 9
+  "mouth_right", // 10
+  "left_shoulder", // 11
+  "right_shoulder", // 12
+  "left_elbow", // 13
+  "right_elbow", // 14
+  "left_wrist", // 15
+  "right_wrist", // 16
+  "left_pinky", // 17
+  "right_pinky", // 18
+  "left_index", // 19
+  "right_index", // 20
+  "left_thumb", // 21
+  "right_thumb", // 22
+  "left_hip", // 23
+  "right_hip", // 24
+  "left_knee", // 25
+  "right_knee", // 26
+  "left_ankle", // 27
+  "right_ankle", // 28
+  "left_heel", // 29
+  "right_heel", // 30
+  "left_foot_index", // 31
+  "right_foot_index", // 32
 ];
 
 async function downloadImage(url, filePath) {
-  const response = await axios.get(url, { responseType: 'stream' });
+  const response = await axios.get(url, { responseType: "stream" });
   const writer = fs.createWriteStream(filePath);
   response.data.pipe(writer);
   return new Promise((resolve, reject) => {
-    writer.on('finish', resolve);
-    writer.on('error', reject);
+    writer.on("finish", resolve);
+    writer.on("error", reject);
   });
 }
 
 function drawSkeleton(ctx, keypoints) {
   // Draw keypoints
-  keypoints.forEach(keypoint => {
-    if (keypoint.score > 0.3) {
+  keypoints.forEach((keypoint, i) => {
+    if (keypoint && keypoint.score > 0.3) {
       ctx.beginPath();
       ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = i < 11 ? "blue" : "red"; // Different colors for face/body
       ctx.fill();
     }
   });
@@ -39,89 +111,118 @@ function drawSkeleton(ctx, keypoints) {
   CONNECTIONS.forEach(([i, j]) => {
     const kp1 = keypoints[i];
     const kp2 = keypoints[j];
-    if (kp1.score > 0.3 && kp2.score > 0.3) {
+    if (kp1 && kp2 && kp1.score > 0.3 && kp2.score > 0.3) {
       ctx.beginPath();
       ctx.moveTo(kp1.x, kp1.y);
       ctx.lineTo(kp2.x, kp2.y);
-      ctx.strokeStyle = 'blue';
+      ctx.strokeStyle = "green";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
   });
 }
 
-async function analyzeWithGemini(imagePath) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-pro-vision' });
-  const imageData = fs.readFileSync(imagePath).toString('base64');
+async function analyzeWithGemini(poseDescription) {
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const prompt = `Analyze this physical pose biomechanical data (BlazePose 33 keypoints):
   
-  const prompt = `Analyze this yoga pose. Identify the pose name, assess alignment accuracy, 
-    provide improvement suggestions, and mention any potential injury risks. Keep response 
-    concise with bullet points.`;
+  ${poseDescription}
 
-  const imagePart = { inlineData: { data: imageData, mimeType: 'image/jpeg' } };
-  const result = await model.generateContent([prompt, imagePart]);
-  return result.response.text();
+  Follow these steps:
+  1. Identify primary joints with >30° flexion/extension
+  2. Check for bilateral symmetry
+  3. Assess weight distribution indicators
+  4. Compare against common exercise/yoga patterns
+  5. Analyze hand/foot positions
+
+  Format response:
+  - Activity: [Name] 
+  - Type: [Yoga/Exercise/Stretching/Sports]
+  - Confidence: [1-100]
+  - Key Biomarkers: 
+    • [Joint1]: [Angle]°
+    • [Joint2]: [Angle]°
+  - Form Tips: 
+    • [Tip1]
+    • [Tip2]
+  - Safety Check: [OK/Caution/Warning]
+  - Balance Assessment: [Good/Fair/Poor]`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error analyzing with Gemini:", error);
+    return "Analysis failed: " + error.message;
+  }
 }
 
 async function processPose(s3Url) {
-  const localPath = 'temp-image.jpg';
-  const outputPath = 'pose-analysis.jpg';
+  const localPath = "temp-image.jpg";
+  const outputPath = "pose-analysis.jpg";
 
   try {
-    // Download image
     await downloadImage(s3Url, localPath);
-
-    // Load image and detect pose
     const image = await loadImage(localPath);
     const canvas = createCanvas(image.width, image.height);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.drawImage(image, 0, 0);
 
+    // Use BlazePose detector with improved configuration
     const detector = await poseDetection.createDetector(
-      poseDetection.SupportedModels.MoveNet,
-      { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
+      poseDetection.SupportedModels.BlazePose,
+      {
+        runtime: "tfjs",
+        modelType: "full",
+        enableSmoothing: true,
+        maxPoses: 1,
+      }
     );
 
     const poses = await detector.estimatePoses(canvas);
-    
-    if (poses.length === 0) {
-      throw new Error('No poses detected in the image');
-    }
+    if (!poses || poses.length === 0) throw new Error("No poses detected");
 
-    // Draw skeleton on image
+    // Draw enhanced skeleton
     drawSkeleton(ctx, poses[0].keypoints);
 
     // Save analyzed image
     const out = fs.createWriteStream(outputPath);
-    const stream = canvas.createJPEGStream({ quality: 0.9 });
+    const stream = canvas.createJPEGStream({ quality: 0.95 });
     stream.pipe(out);
 
-    // Get Gemini analysis
-    const analysis = await analyzeWithGemini(localPath);
-    
+    // Enhanced pose description with 3D data
+    const poseDescription = poses[0].keypoints
+      .map((kp, index) => {
+        const zCoord = kp.z ? `, z: ${kp.z.toFixed(2)}` : "";
+        return `${KEYPOINT_NAMES[index]}: (${kp.x.toFixed(2)}, ${kp.y.toFixed(
+          2
+        )}${zCoord}) score: ${kp.score.toFixed(2)}`;
+      })
+      .join("\n");
+
+    const analysis = await analyzeWithGemini(poseDescription);
+
     return {
       skeletonImage: outputPath,
-      analysis: analysis
+      analysis: analysis,
+      poseDescription: poseDescription,
     };
-
+  } catch (error) {
+    console.error("Error in processPose:", error);
+    throw error;
   } finally {
-    // Cleanup temporary file
     if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
   }
 }
 
-// Usage
-const s3Url = 'https://my-image-storage-bucket748383838838.s3.us-west-1.amazonaws.com/sampleImages/sample-image.jpg';
-
+const s3Url =
+  "https://my-image-storage-bucket748383838838.s3.us-west-1.amazonaws.com/sampleImages/sample-image.jpg";
 processPose(s3Url)
-  .then(({ skeletonImage, analysis }) => {
-    console.log('Analysis Results:');
-    console.log(analysis);
-    console.log(`Skeleton image saved to: ${skeletonImage}`);
+  .then((result) => {
+    console.log("Pose Description:", result.poseDescription);
+    console.log("Analysis:", result.analysis);
+    console.log("Skeleton image saved to:", result.skeletonImage);
   })
-  .catch(err => console.error('Error:', err.message));
-
-
-  // npm install @tensorflow/tfjs-node @tensorflow-models/pose-detection canvas axios @google/generative-ai
-
-  // node poseAnalysis.js
+  .catch((error) => {
+    console.error("Error:", error.message);
+  });

@@ -1,0 +1,153 @@
+function generatePoseDescription(keypoints) {
+
+  let description = "Biomechanical Analysis:\n";
+  const kp = {};
+
+  // Safely map keypoints to named positions
+  keypoints.forEach((point, i) => {
+    if (i < KEYPOINT_NAMES.length) {
+      kp[KEYPOINT_NAMES[i]] = point;
+    }
+  });
+
+  // Add mid-points for additional calculations
+  kp.neck = {
+    x: (kp.left_shoulder?.x + kp.right_shoulder?.x) / 2 || null,
+    y: (kp.left_shoulder?.y + kp.right_shoulder?.y) / 2 || null,
+    score: Math.min(
+      kp.left_shoulder?.score || 0,
+      kp.right_shoulder?.score || 0
+    ),
+  };
+
+  kp.mid_hip = {
+    x: (kp.left_hip?.x + kp.right_hip?.x) / 2 || null,
+    y: (kp.left_hip?.y + kp.right_hip?.y) / 2 || null,
+    score: Math.min(kp.left_hip?.score || 0, kp.right_hip?.score || 0),
+  };
+
+  // Calculate angles with null checks
+  const shoulderAngle = calculateAngle3D(
+    kp.left_shoulder,
+    kp.left_hip,
+    kp.left_ankle
+  );
+  const spineAngle = calculateAngle3D(kp.neck, kp.mid_hip, kp.left_ankle);
+  const hipAngleLeft = calculateAngle3D(
+    kp.left_shoulder,
+    kp.left_hip,
+    kp.left_knee
+  );
+  const kneeAngleLeft = calculateAngle3D(
+    kp.left_hip,
+    kp.left_knee,
+    kp.left_ankle
+  );
+  const leftArmAngle = calculateAngle3D(
+    kp.left_shoulder,
+    kp.left_elbow,
+    kp.left_wrist
+  );
+  const rightArmAngle = calculateAngle3D(
+    kp.right_shoulder,
+    kp.right_elbow,
+    kp.right_wrist
+  );
+
+  // Safe calculations for alignments
+  const shoulderHipAlignment =
+    kp.left_shoulder && kp.left_hip
+      ? Math.abs(kp.left_shoulder.y - kp.left_hip.y)
+      : null;
+  const hipAnkleAlignment =
+    kp.left_hip && kp.left_ankle
+      ? Math.abs(kp.left_hip.x - kp.left_ankle.x)
+      : null;
+
+  // Revised angle calculations
+  const shoulderFlexionLeft = calculateAngle3D(
+    kp.left_hip,
+    kp.left_shoulder,
+    kp.left_elbow
+  );
+
+  const kneeFlexionLeft = calculateAngle3D(
+    kp.left_hip,
+    kp.left_knee,
+    kp.left_ankle
+  );
+
+  const spineAlignment = calculateAngle3D(
+    kp.left_shoulder,
+    kp.mid_hip,
+    kp.left_knee
+  );
+
+  description += `- Shoulder flexion: ${
+    shoulderAngle ? shoulderAngle.toFixed(1) + "°" : "N/A"
+  }\n`;
+  description += `- Spinal alignment: ${
+    spineAngle ? spineAngle.toFixed(1) + "°" : "N/A"
+  }\n`;
+  description += `- Hip angle (L): ${
+    hipAngleLeft ? hipAngleLeft.toFixed(1) + "°" : "N/A"
+  }\n`;
+  description += `- Knee angle (L): ${
+    kneeAngleLeft ? kneeAngleLeft.toFixed(1) + "°" : "N/A"
+  }\n`;
+  description += `- Arm angles (L/R): ${
+    leftArmAngle ? leftArmAngle.toFixed(1) + "°" : "N/A"
+  }/${rightArmAngle ? rightArmAngle.toFixed(1) + "°" : "N/A"}\n`;
+  description += `- Body alignment: Shoulder-Hip ${
+    shoulderHipAlignment ? shoulderHipAlignment.toFixed(1) : "N/A"
+  }px, Hip-Ankle ${
+    hipAnkleAlignment ? hipAnkleAlignment.toFixed(1) : "N/A"
+  }px\n`;
+
+  // Safe pose detection
+  const isWeightBearing =
+    kp.left_wrist && kp.right_wrist && kp.left_shoulder && kp.right_shoulder
+      ? kp.left_wrist.y < kp.left_shoulder.y &&
+        kp.right_wrist.y < kp.right_shoulder.y
+      : false;
+  const lowerBodyBend =
+    kneeAngleLeft && hipAngleLeft
+      ? kneeAngleLeft < 120 && hipAngleLeft < 100
+      : false;
+  const upperBodyBend = spineAngle ? spineAngle > 45 : false;
+
+  description += `\nKey Features:\n`;
+  description += `- Weight bearing: ${isWeightBearing ? "Yes" : "No"}\n`;
+  description += `- Lower body flexion: ${
+    lowerBodyBend ? "Significant" : "Minimal"
+  }\n`;
+  description += `- Upper body flexion: ${
+    upperBodyBend ? "Significant" : "Minimal"
+  }\n`;
+  description += `- Shoulder flexion (L): ${
+    shoulderFlexionLeft?.toFixed(1) || "N/A"
+  }°\n`;
+  description += `- Knee flexion (L): ${
+    kneeFlexionLeft?.toFixed(1) || "N/A"
+  }°\n`;
+  description += `- Spinal alignment: ${
+    spineAlignment?.toFixed(1) || "N/A"
+  }°\n`;
+
+  const torsoLength = Math.sqrt(
+    Math.pow(kp.neck.x - kp.mid_hip.x, 2) +
+      Math.pow(kp.neck.y - kp.mid_hip.y, 2)
+  );
+
+  const legLength = Math.sqrt(
+    Math.pow(kp.mid_hip.x - kp.left_ankle.x, 2) +
+      Math.pow(kp.mid_hip.y - kp.left_ankle.y, 2)
+  );
+
+  const proportion =
+    torsoLength > 0 ? (legLength / torsoLength).toFixed(1) : null;
+
+  description += `- Body proportions (leg/torso): ${proportion || "N/A"}\n`;
+
+  return description;
+}
