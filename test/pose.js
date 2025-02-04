@@ -6,6 +6,12 @@ const fs = require("fs");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI("AIzaSyAa6hB83viUHiIYurYEGHaGli-W9dTxaEs");
 
+async function initializeTF() {
+  await tf.setBackend('cpu');
+  await tf.ready();
+  await tf.enableProdMode();
+}
+
 // Updated connections for BlazePose (33 keypoints)
 const CONNECTIONS = [
   // Face
@@ -158,6 +164,7 @@ async function analyzeWithGemini(poseDescription) {
 }
 
 async function processPose(s3Url) {
+  await initializeTF();
   const localPath = "temp-image.jpg";
   const outputPath = "pose-analysis.jpg";
 
@@ -172,10 +179,12 @@ async function processPose(s3Url) {
     const detector = await poseDetection.createDetector(
       poseDetection.SupportedModels.BlazePose,
       {
-        runtime: "tfjs",
-        modelType: "full",
+        runtime: 'tfjs',
+        modelType: 'full',
         enableSmoothing: true,
         maxPoses: 1,
+        scoreThreshold: 0.3,
+        backend: 'cpu' 
       }
     );
 
@@ -212,6 +221,7 @@ async function processPose(s3Url) {
     throw error;
   } finally {
     if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+    tf.engine().disposeVariables();
   }
 }
 
