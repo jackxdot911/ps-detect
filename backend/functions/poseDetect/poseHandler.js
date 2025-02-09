@@ -1,14 +1,32 @@
-import * as tf from "@tensorflow/tfjs-node";
-import * as poseDetection from "@tensorflow-models/pose-detection";
-import { createCanvas, loadImage } from "canvas";
 import axios from "axios";
 import fs from "fs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import * as tf from "@tensorflow/tfjs-node";
+import * as poseDetection from "@tensorflow-models/pose-detection";
+import { createCanvas, loadImage } from "canvas";
 
 const genAI = new GoogleGenerativeAI("AIzaSyAa6hB83viUHiIYurYEGHaGli-W9dTxaEs");
 
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  DeleteCommand,
+} = require("@aws-sdk/lib-dynamodb");
+const express = require("express");
+const serverless = require("serverless-http");
+
+const app = express();
+
+const USERS_TABLE = process.env.USERS_TABLE;
+const client = new DynamoDBClient();
+const docClient = DynamoDBDocumentClient.from(client);
+
+app.use(express.json());
+
 async function initializeTF() {
-  await tf.setBackend('cpu');
+  await tf.setBackend("cpu");
   await tf.ready();
   await tf.enableProdMode();
 }
@@ -180,12 +198,12 @@ async function processPose(s3Url) {
     const detector = await poseDetection.createDetector(
       poseDetection.SupportedModels.BlazePose,
       {
-        runtime: 'tfjs',
-        modelType: 'full',
+        runtime: "tfjs",
+        modelType: "full",
         enableSmoothing: true,
         maxPoses: 1,
         scoreThreshold: 0.3,
-        backend: 'cpu' 
+        backend: "cpu",
       }
     );
 
@@ -226,14 +244,43 @@ async function processPose(s3Url) {
   }
 }
 
-const s3Url =
-  "https://my-image-storage-bucket748383838838.s3.us-west-1.amazonaws.com/sampleImages/sample-image.jpg";
-processPose(s3Url)
-  .then((result) => {
-    console.log("Pose Description:", result.poseDescription);
-    console.log("Analysis:", result.analysis);
-    console.log("Skeleton image saved to:", result.skeletonImage);
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
+app.get("/ps-detect", async (req, res) => {
+    try {
+      // Get S3 URL from query params, fallback to default sample image
+      const s3Url =
+        req.query.s3Url ||
+        "https://my-image-storage-bucket748383838838.s3.us-west-1.amazonaws.com/sampleImages/sample-image.jpg";
+  
+      // Validate URL format
+      if (!s3Url.startsWith("https://") || !s3Url.includes("s3")) {
+        return res.status(400).json({ error: "Invalid S3 URL provided" });
+      }
+      console.log("Processing pose detection for:", s3Url);
+      const result = await processPose(s3Url);
+  
+      console.log("Pose Detection Completed");
+      console.log("Pose Description:", result.poseDescription);
+      console.log("Analysis:", result.analysis);
+      console.log("Skeleton image saved to:", result.skeletonImage);
+  
+      res.json({
+        success: true,
+        message: "Pose detection analysis completed",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error in /ps-detect:", error);
+      res.status(500).json({
+        success: false,
+        error: "An error occurred while processing the pose detection",
+        details: error.message,
+      });
+    }
   });
+
+// Catch-all route for undefined paths
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
+exports.handler = serverless(app);

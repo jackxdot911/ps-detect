@@ -1,11 +1,8 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const {
-  DynamoDBDocumentClient,
-  PutCommand,
-  GetCommand,
-} = require("@aws-sdk/lib-dynamodb");
-const { v4: uuidv4 } = require("uuid"); // Import UUID
-const { CognitoIdentityServiceProvider } = require("aws-sdk");
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { v4 as uuidv4 } from "uuid"; // Import UUID
+import { CognitoIdentityServiceProvider } from "aws-sdk";
+
 
 const USERS_TABLE = process.env.USERS_TABLE;
 const client = new DynamoDBClient();

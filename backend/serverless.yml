@@ -1,6 +1,11 @@
 org: jack001
 service: ps-detct
 
+package:
+  individually: true
+  exclude:
+    - node_modules/**
+
 custom:
   userPoolId: "us-east-1_0CLbqEKoy"
   userPoolClientId: "21od8gs8rm64ac7ah555asiun3"
@@ -46,7 +51,7 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:Query
             - dynamodb:Scan
-          Resource: 
+          Resource:
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:usersTableName}"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:workoutTableName}"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${param:s3keyTableName}"
@@ -63,8 +68,28 @@ provider:
           # in place of * we can put the account id (region}:*:userpool)
           # Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:custom.userPoolId}
 
+layers:
+  tfjsLayer:
+    path: layer/tfjs-node
+    compatibleRuntimes:
+      - nodejs20.x
+    package:
+      include: 
+        - "nodejs/node_modules/**"
+        - "!nodejs/package.json"
+        - "!nodejs/package-lock.json"     
+  commonLayer:
+    path: layer/common-node
+    compatibleRuntimes:
+      - nodejs20.x
+    package:
+      include: 
+        - "nodejs/node_modules/**"
+        - "!nodejs/package.json"
+        - "!nodejs/package-lock.json"
+
 functions:
-  api:
+  userManagementApi:
     handler: functions/userManagement/userHandlers.handler
     events:
       - httpApi:
@@ -77,7 +102,19 @@ functions:
           method: PUT
           authorizer:
             name: customAuthorizer
-  
+    layers:
+      - { Ref: CommonLayerLambdaLayer }
+      
+  poseDetectionApi:
+    handler: functions/poseDetect/poseHandler.handler
+    events:
+      - httpApi:
+          path: /ps-detect
+          method: GET
+    layers:
+      - { Ref: TfjsLayerLambdaLayer }
+      - { Ref: CommonLayerLambdaLayer }
+
   generateUserId:
     handler: functions/triggers/generateUserId.handler
     events:
