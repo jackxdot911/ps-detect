@@ -7,15 +7,15 @@ import { createCanvas, loadImage } from "canvas";
 
 const genAI = new GoogleGenerativeAI("AIzaSyAa6hB83viUHiIYurYEGHaGli-W9dTxaEs");
 
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const {
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { 
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
-  DeleteCommand,
-} = require("@aws-sdk/lib-dynamodb");
-const express = require("express");
-const serverless = require("serverless-http");
+  DeleteCommand 
+} from "@aws-sdk/lib-dynamodb";
+import express from "express";
+import serverless from "serverless-http";
 
 const app = express();
 
@@ -283,4 +283,4 @@ app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
 
-exports.handler = serverless(app);
+export const handler = serverless(app);

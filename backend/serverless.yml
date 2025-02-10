@@ -39,6 +39,11 @@ provider:
     S3KEY_TABLE: ${param:s3keyTableName}
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
+  
+  ecr:
+    images:
+      psdetectposedetection:
+        path: functions/poseDetect/
 
   iam:
     role:
@@ -58,6 +63,16 @@ provider:
 
             # or  wildcard to give permission to all tables
             # - "arn:aws:dynamodb:${self:provider.region}:*:table/*"
+        - Effect: Allow
+          Action:
+            - ecr:GetAuthorizationToken
+            - ecr:BatchCheckLayerAvailability
+            - ecr:GetDownloadUrlForLayer
+            - ecr:InitiateLayerUpload
+            - ecr:UploadLayerPart
+            - ecr:CompleteLayerUpload
+            - ecr:PutImage
+          Resource: "*"
 
         - Effect: Allow
           Action:
@@ -68,16 +83,7 @@ provider:
           # in place of * we can put the account id (region}:*:userpool)
           # Resource: arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:custom.userPoolId}
 
-layers:
-  tfjsLayer:
-    path: layer/tfjs-node
-    compatibleRuntimes:
-      - nodejs20.x
-    package:
-      include: 
-        - "nodejs/node_modules/**"
-        - "!nodejs/package.json"
-        - "!nodejs/package-lock.json"     
+layers:   
   commonLayer:
     path: layer/common-node
     compatibleRuntimes:
@@ -106,14 +112,12 @@ functions:
       - { Ref: CommonLayerLambdaLayer }
       
   poseDetectionApi:
-    handler: functions/poseDetect/poseHandler.handler
+    image: psdetectposedetection
+    timeout: 30
     events:
       - httpApi:
           path: /ps-detect
           method: GET
-    layers:
-      - { Ref: TfjsLayerLambdaLayer }
-      - { Ref: CommonLayerLambdaLayer }
 
   generateUserId:
     handler: functions/triggers/generateUserId.handler
@@ -179,3 +183,15 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${param:s3keyTableName}
+
+
+
+
+
+
+
+
+
+
+
+# ╰─ sls logs -f poseDetectionApi --tail                                74% 󰂁 ─╯
