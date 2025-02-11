@@ -40,10 +40,10 @@ provider:
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
   
-  ecr:
-    images:
-      psdetectposedetection:
-        path: functions/poseDetect/
+  # ecr:
+  #   images:
+  #     psdetectposedetection:
+  #       path: functions/poseDetect/
 
   iam:
     role:
@@ -111,16 +111,18 @@ functions:
     layers:
       - { Ref: CommonLayerLambdaLayer }
       
-  poseDetectionApi:
-    image: psdetectposedetection
-    timeout: 30
-    events:
-      - httpApi:
-          path: /ps-detect
-          method: GET
+  # poseDetectionApi:
+  #   image: psdetectposedetection
+  #   timeout: 30
+  #   events:
+  #     - httpApi:
+  #         path: /ps-detect
+  #         method: GET
 
   generateUserId:
     handler: functions/triggers/generateUserId.handler
+    layers:
+      - { Ref: CommonLayerLambdaLayer }
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
@@ -130,6 +132,8 @@ functions:
 
   userCreated:
     handler: functions/triggers/userCreated.handler
+    layers:
+      - { Ref: CommonLayerLambdaLayer }
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
@@ -137,8 +141,11 @@ functions:
           existing: true
           forceDeploy: true
 
+
   userLoggedIn:
     handler: functions/triggers/userLoggedIn.handler
+    layers:
+      - { Ref: CommonLayerLambdaLayer }
     events:
       - cognitoUserPool:
           pool: ${self:custom.userPoolName}
