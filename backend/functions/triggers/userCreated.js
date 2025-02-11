@@ -9,7 +9,7 @@ const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
 const cognito = new CognitoIdentityServiceProvider();
 
-module.exports.handler = async (event) => {
+export const handler = async (event) => {
   console.log("PostAuthentication Event:", JSON.stringify(event, null, 2));
 
   const userAttributes = event.request.userAttributes;
@@ -51,7 +51,7 @@ module.exports.handler = async (event) => {
     const { Item } = await docClient.send(getCommand);
 
     console.log(Item);
-    
+
 
     if (Item) {
       console.log("User already exists in DynamoDB:", Item);
